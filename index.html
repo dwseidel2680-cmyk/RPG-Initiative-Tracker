@@ -487,7 +487,19 @@ function removeCombatant(index) {
 
 function sortByInitiative() {
   const activeId = state.combatants[state.activeIndex]?.id;
-  state.combatants.sort((a,b) => (parseFloat(b.initiative) || 0) - (parseFloat(a.initiative) || 0));
+  state.combatants.sort((a, b) => {
+    const initA = parseFloat(a.initiative) || 0;
+    const initB = parseFloat(b.initiative) || 0;
+    if (initB !== initA) return initB - initA;
+
+    const modA = parseFloat(a.initMod) || 0;
+    const modB = parseFloat(b.initMod) || 0;
+    if (modB !== modA) return modB - modA;
+
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
   const newIndex = state.combatants.findIndex(c => c.id === activeId);
   state.activeIndex = newIndex >= 0 ? newIndex : 0;
   renderTable();
