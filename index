@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LoreSource Initiative Tracker</title>
+<style>
+  :root {
+    --bg:#1b1f24;
+    --panel:#252b33;
+    --panel2:#313844;
+    --line:#4a5563;
+    --text:#ecf0f3;
+    --muted:#b8c1cc;
+    --accent:#8fb7ff;
+    --good:#90d490;
+    --warn:#e2c36f;
+    --bad:#e18e8e;
+    --pc:#20344d;
+    --ally:#213d2b;
+    --enemy:#3d2626;
+    --active:#4a5f84;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:20px;
+  }
+  .container { max-width: 1600px; margin: 0 auto; }
+  h1,h2 { margin:0 0 10px 0; }
+  h1 { text-align:center; margin-bottom:6px; }
+  .sub { text-align:center; color:var(--muted); margin-bottom:14px; }
+  .toolbar {
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;
+    position:sticky; top:0; z-index:50; background:var(--bg); padding:10px 0;
+  }
+  button {
+    border:none; border-radius:8px; padding:10px 14px; font-weight:700; cursor:pointer;
+    background:var(--accent); color:#0d1320;
+  }
+  button.secondary {
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+  }
+  .status { margin-left:auto; color:var(--muted); font-size:14px; }
+  .card {
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px;
+    margin-bottom:16px;
+  }
+  .summary-grid {
+    display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap:10px;
+  }
+  .field label {
+    display:block; color:var(--muted); font-size:12px; font-weight:700; margin-bottom:5px;
+    letter-spacing:.04em; text-transform:uppercase;
+  }
+  input, select, textarea {
+    width:100%; background:#11161d; color:var(--text); border:1px solid var(--line);
+    border-radius:6px; padding:8px; font:inherit;
+  }
+  textarea { min-height:90px; resize:vertical; }
+  .pill-row {
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:12px;
+  }
+  .pill {
+    background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px;
+  }
+  .pill .label { color:var(--muted); font-size:12px; text-transform:uppercase; }
+  .pill .value { font-size:22px; font-weight:700; margin-top:4px; }
+  .table-wrap {
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#11161d;
+    max-height:70vh;
+  }
+  table {
+    width:max-content;
+    min-width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+  }
+  th, td {
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding:6px;
+    background:#1b212a;
+    vertical-align:top;
+  }
+  th {
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:var(--panel2);
+    text-align:left;
+    font-size:13px;
+  }
+  th:first-child, td:first-child { border-left:0; }
+  tr:first-child th { border-top:0; }
+  .sticky-1 { position:sticky; left:0; z-index:15; }
+  .sticky-2 { position:sticky; left:60px; z-index:15; }
+  .sticky-3 { position:sticky; left:240px; z-index:15; }
+  th.sticky-1, th.sticky-2, th.sticky-3 { z-index:25; }
+  .turn-col { width:60px; min-width:60px; text-align:center; }
+  .name-col { width:180px; min-width:180px; }
+  .player-col { width:140px; min-width:140px; }
+  .side-col { width:90px; min-width:90px; }
+  .num-col { width:88px; min-width:88px; }
+  .position-col { width:120px; min-width:120px; }
+  .notes-col { width:180px; min-width:180px; }
+  .round-col { width:70px; min-width:70px; }
+  .center { text-align:center; }
+  .row-pc td { background:var(--pc); }
+  .row-ally td { background:var(--ally); }
+  .row-monster td, .row-npc td { background:#2a2020; }
+  .row-bloodied td { box-shadow: inset 0 0 0 9999px rgba(226,195,111,0.12); }
+  .row-dead td { box-shadow: inset 0 0 0 9999px rgba(225,142,142,0.18); color:#d9b1b1; }
+  .row-active td { outline:2px solid var(--accent); outline-offset:-2px; }
+  .turn-marker {
+    display:inline-block; min-width:24px; padding:2px 6px; border-radius:999px;
+    background:var(--accent); color:#111; font-weight:700;
+  }
+  .turn-empty {
+    display:inline-block; min-width:24px;
+  }
+  .small-note { color:var(--muted); font-size:12px; margin-top:8px; }
+  @media (max-width: 1100px) {
+    .summary-grid, .pill-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 700px) {
+    .summary-grid, .pill-row { grid-template-columns: 1fr; }
+    .status { width:100%; margin-left:0; }
+  }
+  @media print {
+    body { background:white; color:black; padding:8px; }
+    .card { background:white; border:1px solid #999; }
+    .toolbar { display:none; }
+    input, select, textarea { background:white; color:black; border:1px solid #999; }
+    th { background:#eee; color:black; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>LoreSource Initiative Tracker</h1>
+  <div class="sub">Browser-based initiative and HP tracker with frozen left columns, round-by-round HP changes, autosave, and export/import.</div>
+
+  <div class="toolbar">
+    <button onclick="saveNow()">Save Now</button>
+    <button class="secondary" onclick="exportData()">Export Save</button>
+    <button class="secondary" onclick="document.getElementById('importFile').click()">Import Save</button>
+    <button class="secondary" onclick="resetEncounter()">Reset Encounter</button>
+    <button class="secondary" onclick="addCombatant()">Add Combatant</button>
+    <button class="secondary" onclick="sortByInitiative()">Sort by Initiative</button>
+    <button class="secondary" onclick="previousTurn()">Previous Turn</button>
+    <button class="secondary" onclick="nextTurn()">Next Turn</button>
+    <button class="secondary" onclick="newRound()">New Round</button>
+    <input id="importFile" type="file" accept="application/json" style="display:none" />
+    <div class="status" id="saveStatus">Autosave ready.</div>
+  </div>
+
+  <div class="card">
+    <div class="summary-grid">
+      <div class="field"><label>Encounter Name</label><input id="encounterName" value="New Encounter"></div>
+      <div class="field"><label>Current Round</label><input id="currentRound" type="number" min="1" value="1"></div>
+      <div class="field"><label>Active Turn</label><input id="activeTurnDisplay" readonly></div>
+      <div class="field"><label>Total Combatants</label><input id="totalCombatants" readonly></div>
+      <div class="field"><label>Encounter Notes</label><input id="encounterQuickNote"></div>
+    </div>
+    <div class="pill-row">
+      <div class="pill"><div class="label">PCs Remaining</div><div class="value" id="pcsRemaining">0</div></div>
+      <div class="pill"><div class="label">Enemies Remaining</div><div class="value" id="enemiesRemaining">0</div></div>
+      <div class="pill"><div class="label">Bloodied</div><div class="value" id="bloodiedCount">0</div></div>
+      <div class="pill"><div class="label">Down / Dead</div><div class="value" id="deadCount">0</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Combat Table</h2>
+    <div class="table-wrap">
+      <table id="combatTable">
+        <thead>
+          <tr>
+            <th class="sticky-1 turn-col">Turn</th>
+            <th class="sticky-2 name-col">Character Name</th>
+            <th class="sticky-3 player-col">Player Name</th>
+            <th class="side-col">Side</th>
+            <th class="num-col">Init Mod</th>
+            <th class="num-col">Initiative</th>
+            <th class="position-col">Start Position</th>
+            <th class="num-col">Max HP</th>
+            <th class="num-col">Total HP Change</th>
+            <th class="num-col">Current HP</th>
+            <th class="position-col">Status</th>
+            <th class="notes-col">Notes</th>
+            <th class="round-col">R1</th>
+            <th class="round-col">R2</th>
+            <th class="round-col">R3</th>
+            <th class="round-col">R4</th>
+            <th class="round-col">R5</th>
+            <th class="round-col">R6</th>
+            <th class="round-col">R7</th>
+            <th class="round-col">R8</th>
+            <th class="round-col">R9</th>
+            <th class="round-col">R10</th>
+            <th class="round-col">R11</th>
+            <th class="round-col">R12</th>
+            <th class="round-col">R13</th>
+            <th class="round-col">R14</th>
+            <th class="round-col">R15</th>
+            <th class="notes-col">Overflow / Notes</th>
+            <th class="num-col">Delete</th>
+          </tr>
+        </thead>
+        <tbody id="combatBody"></tbody>
+      </table>
+    </div>
+    <div class="small-note">Use positive numbers for damage and negative numbers for healing in round columns. Turn, Character Name, and Player Name stay visible while you scroll horizontally.</div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'loresource_initiative_tracker_v1';
+const bodyEl = document.getElementById('combatBody');
+const saveStatusEl = document.getElementById('saveStatus');
+const encounterNameEl = document.getElementById('encounterName');
+const currentRoundEl = document.getElementById('currentRound');
+const activeTurnDisplayEl = document.getElementById('activeTurnDisplay');
+const totalCombatantsEl = document.getElementById('totalCombatants');
+const encounterQuickNoteEl = document.getElementById('encounterQuickNote');
+const pcsRemainingEl = document.getElementById('pcsRemaining');
+const enemiesRemainingEl = document.getElementById('enemiesRemaining');
+const bloodiedCountEl = document.getElementById('bloodiedCount');
+const deadCountEl = document.getElementById('deadCount');
+const importFileEl = document.getElementById('importFile');
+
+const DEFAULT_ROWS = 12;
+const ROUND_COUNT = 15;
+
+let state = {
+  encounterName: 'New Encounter',
+  currentRound: 1,
+  encounterQuickNote: '',
+  activeIndex: 0,
+  combatants: []
+};
+
+function blankCombatant() {
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+    name: '',
+    player: '',
+    side: 'Monster',
+    initMod: 0,
+    initiative: 0,
+    startPosition: '',
+    maxHp: 0,
+    notes: '',
+    overflow: '',
+    rounds: Array(ROUND_COUNT).fill('')
+  };
+}
+
+function ensureRows(count = DEFAULT_ROWS) {
+  while (state.combatants.length < count) state.combatants.push(blankCombatant());
+}
+
+function calcTotalHpChange(c) {
+  return c.rounds.reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+}
+
+function calcCurrentHp(c) {
+  return (parseFloat(c.maxHp) || 0) - calcTotalHpChange(c);
+}
+
+function calcStatus(c) {
+  const maxHp = parseFloat(c.maxHp) || 0;
+  const currentHp = calcCurrentHp(c);
+  if (maxHp <= 0) return '';
+  if (currentHp <= 0) return 'Down / Dead';
+  if (currentHp <= maxHp / 2) return 'Bloodied';
+  return 'Normal';
+}
+
+function rowClass(c, index) {
+  const side = (c.side || '').toLowerCase();
+  const classes = [];
+  if (side === 'pc') classes.push('row-pc');
+  else if (side === 'ally') classes.push('row-ally');
+  else if (side === 'npc') classes.push('row-npc');
+  else classes.push('row-monster');
+
+  const status = calcStatus(c);
+  if (status === 'Bloodied') classes.push('row-bloodied');
+  if (status === 'Down / Dead') classes.push('row-dead');
+  if (index === state.activeIndex) classes.push('row-active');
+  return classes.join(' ');
+}
+
+function renderTable() {
+  bodyEl.innerHTML = '';
+  state.combatants.forEach((c, index) => {
+    const totalChange = calcTotalHpChange(c);
+    const currentHp = calcCurrentHp(c);
+    const status = calcStatus(c);
+
+    const tr = document.createElement('tr');
+    tr.className = rowClass(c, index);
+
+    const turnCell = document.createElement('td');
+    turnCell.className = 'sticky-1 turn-col center';
+    turnCell.innerHTML = index === state.activeIndex ? '<span class="turn-marker">▶</span>' : '<span class="turn-empty"></span>';
+    tr.appendChild(turnCell);
+
+    tr.appendChild(makeInputCell(index, 'name', c.name, 'text', 'sticky-2 name-col'));
+    tr.appendChild(makeInputCell(index, 'player', c.player, 'text', 'sticky-3 player-col'));
+
+    const sideCell = document.createElement('td');
+    sideCell.className = 'side-col';
+    const sideSelect = document.createElement('select');
+    ['PC','Ally','NPC','Monster'].forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      if ((c.side || 'Monster') === opt) o.selected = true;
+      sideSelect.appendChild(o);
+    });
+    sideSelect.addEventListener('input', () => { c.side = sideSelect.value; changed(); });
+    sideCell.appendChild(sideSelect);
+    tr.appendChild(sideCell);
+
+    tr.appendChild(makeInputCell(index, 'initMod', c.initMod, 'number', 'num-col'));
+    tr.appendChild(makeInputCell(index, 'initiative', c.initiative, 'number', 'num-col'));
+    tr.appendChild(makeInputCell(index, 'startPosition', c.startPosition, 'text', 'position-col'));
+    tr.appendChild(makeInputCell(index, 'maxHp', c.maxHp, 'number', 'num-col'));
+
+    const totalCell = document.createElement('td');
+    totalCell.className = 'num-col';
+    totalCell.textContent = String(totalChange);
+    tr.appendChild(totalCell);
+
+    const hpCell = document.createElement('td');
+    hpCell.className = 'num-col';
+    hpCell.textContent = String(currentHp);
+    tr.appendChild(hpCell);
+
+    const statusCell = document.createElement('td');
+    statusCell.className = 'position-col';
+    statusCell.textContent = status;
+    tr.appendChild(statusCell);
+
+    tr.appendChild(makeInputCell(index, 'notes', c.notes, 'text', 'notes-col'));
+
+    for (let i = 0; i < ROUND_COUNT; i++) {
+      const td = document.createElement('td');
+      td.className = 'round-col';
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.value = c.rounds[i];
+      input.addEventListener('input', () => { c.rounds[i] = input.value; changed(false); });
+      td.appendChild(input);
+      tr.appendChild(td);
+    }
+
+    tr.appendChild(makeInputCell(index, 'overflow', c.overflow, 'text', 'notes-col'));
+
+    const deleteCell = document.createElement('td');
+    deleteCell.className = 'num-col center';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'secondary';
+    delBtn.textContent = 'X';
+    delBtn.style.padding = '6px 10px';
+    delBtn.addEventListener('click', () => removeCombatant(index));
+    deleteCell.appendChild(delBtn);
+    tr.appendChild(deleteCell);
+
+    bodyEl.appendChild(tr);
+  });
+
+  updateSummary();
+}
+
+function makeInputCell(index, key, value, type = 'text', cls = '') {
+  const td = document.createElement('td');
+  td.className = cls;
+  const input = document.createElement('input');
+  input.type = type;
+  input.value = value ?? '';
+  input.addEventListener('input', () => {
+    state.combatants[index][key] = input.value;
+    changed(false);
+  });
+  td.appendChild(input);
+  return td;
+}
+
+function updateSummary() {
+  totalCombatantsEl.value = state.combatants.length;
+  encounterNameEl.value = state.encounterName;
+  currentRoundEl.value = state.currentRound;
+  encounterQuickNoteEl.value = state.encounterQuickNote;
+
+  const active = state.combatants[state.activeIndex];
+  activeTurnDisplayEl.value = active ? (active.name || `(Row ${state.activeIndex + 1})`) : '';
+
+  let pcs = 0, enemies = 0, bloodied = 0, dead = 0;
+  state.combatants.forEach(c => {
+    const status = calcStatus(c);
+    const side = (c.side || '').toLowerCase();
+    if (status === 'Bloodied') bloodied += 1;
+    if (status === 'Down / Dead') dead += 1;
+    if (side === 'pc' && status !== 'Down / Dead') pcs += 1;
+    if ((side === 'monster' || side === 'npc') && status !== 'Down / Dead') enemies += 1;
+  });
+
+  pcsRemainingEl.textContent = String(pcs);
+  enemiesRemainingEl.textContent = String(enemies);
+  bloodiedCountEl.textContent = String(bloodied);
+  deadCountEl.textContent = String(dead);
+}
+
+function changed(save = true) {
+  renderTable();
+  if (save) saveNow();
+  else debouncedSave();
+}
+
+let saveTimer;
+function debouncedSave() {
+  clearTimeout(saveTimer);
+  saveStatusEl.textContent = 'Editing...';
+  saveTimer = setTimeout(saveNow, 250);
+}
+
+function saveNow() {
+  state.encounterName = encounterNameEl.value;
+  state.currentRound = parseInt(currentRoundEl.value, 10) || 1;
+  state.encounterQuickNote = encounterQuickNoteEl.value;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  saveStatusEl.textContent = 'Saved ' + new Date().toLocaleTimeString();
+}
+
+function loadData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    ensureRows();
+    renderTable();
+    return;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    state = parsed;
+    if (!Array.isArray(state.combatants)) state.combatants = [];
+    state.combatants = state.combatants.map(c => ({
+      ...blankCombatant(),
+      ...c,
+      rounds: Array.isArray(c.rounds) ? c.rounds.slice(0, ROUND_COUNT).concat(Array(Math.max(0, ROUND_COUNT - c.rounds.length)).fill('')) : Array(ROUND_COUNT).fill('')
+    }));
+    ensureRows(state.combatants.length || DEFAULT_ROWS);
+    renderTable();
+    saveStatusEl.textContent = 'Loaded saved tracker.';
+  } catch {
+    ensureRows();
+    renderTable();
+    saveStatusEl.textContent = 'Save data could not be loaded.';
+  }
+}
+
+function addCombatant() {
+  state.combatants.push(blankCombatant());
+  renderTable();
+  saveNow();
+}
+
+function removeCombatant(index) {
+  if (state.combatants.length <= 1) return;
+  state.combatants.splice(index, 1);
+  if (state.activeIndex >= state.combatants.length) state.activeIndex = state.combatants.length - 1;
+  renderTable();
+  saveNow();
+}
+
+function sortByInitiative() {
+  const activeId = state.combatants[state.activeIndex]?.id;
+  state.combatants.sort((a,b) => (parseFloat(b.initiative) || 0) - (parseFloat(a.initiative) || 0));
+  const newIndex = state.combatants.findIndex(c => c.id === activeId);
+  state.activeIndex = newIndex >= 0 ? newIndex : 0;
+  renderTable();
+  saveNow();
+}
+
+function nextTurn() {
+  if (!state.combatants.length) return;
+  state.activeIndex = (state.activeIndex + 1) % state.combatants.length;
+  renderTable();
+  saveNow();
+}
+
+function previousTurn() {
+  if (!state.combatants.length) return;
+  state.activeIndex = (state.activeIndex - 1 + state.combatants.length) % state.combatants.length;
+  renderTable();
+  saveNow();
+}
+
+function newRound() {
+  state.currentRound = (parseInt(currentRoundEl.value, 10) || state.currentRound || 1) + 1;
+  currentRoundEl.value = state.currentRound;
+  saveNow();
+}
+
+function resetEncounter() {
+  if (!confirm('Reset this encounter?')) return;
+  state = {
+    encounterName: 'New Encounter',
+    currentRound: 1,
+    encounterQuickNote: '',
+    activeIndex: 0,
+    combatants: []
+  };
+  ensureRows();
+  renderTable();
+  saveNow();
+}
+
+function exportData() {
+  saveNow();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'loresource-initiative-tracker.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+importFileEl.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    state = parsed;
+    if (!Array.isArray(state.combatants)) state.combatants = [];
+    ensureRows(state.combatants.length || DEFAULT_ROWS);
+    renderTable();
+    saveNow();
+    saveStatusEl.textContent = 'Imported save file.';
+  } catch {
+    alert('Import failed.');
+  }
+  e.target.value = '';
+});
+
+encounterNameEl.addEventListener('input', debouncedSave);
+currentRoundEl.addEventListener('input', debouncedSave);
+encounterQuickNoteEl.addEventListener('input', debouncedSave);
+
+loadData();
+</script>
+</body>
+</html>
