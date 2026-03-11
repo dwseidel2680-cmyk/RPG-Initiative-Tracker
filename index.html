@@ -387,10 +387,14 @@ function makeInputCell(index, key, value, type = 'text', cls = '') {
   const input = document.createElement('input');
   input.type = type;
   input.value = value ?? '';
+
+  // Update state without forcing a full table re-render so typing stays focused
   input.addEventListener('input', () => {
     state.combatants[index][key] = input.value;
-    changed(false);
+    updateSummary();
+    debouncedSave();
   });
+
   td.appendChild(input);
   return td;
 }
